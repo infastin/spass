@@ -1,0 +1,398 @@
+#!/bin/sh
+
+# Colors
+
+black=$(tput setaf 0)
+red=$(tput setaf 1)
+green=$(tput setaf 2)
+yellow=$(tput setaf 3)
+lime_yellow=$(tput setaf 190)
+powder_blue=$(tput setaf 153)
+blue=$(tput setaf 4)
+magenta=$(tput setaf 5)
+cyan=$(tput setaf 6)
+white=$(tput setaf 7)
+normal=$(tput sgr0)
+underline=$(tput smul)
+bold=$(tput bold)
+
+# Config
+
+config="$(dirname $0)/spass-config"
+
+if test -f "$config"
+then
+	source "$config"
+
+	if ! [[ -n "$defaultPort" ]] || ! [[ -n "$defaultCard" ]] 
+	then
+		$0 gen
+		source "$config"
+	fi
+else
+	$0 gen
+	source "$config"
+fi
+
+# Cards
+cards=()
+
+while read -r card
+do
+	cards+=("$card")
+done < <(pactl list sinks short | awk '{print $2}' | grep -oP "alsa_output.\K(.+)(?=\.[\w\-]+)")
+
+# Global vars
+declare -A opts=( 
+	["port"]="" 
+	["card"]=""
+)
+
+toStart=1
+
+# Functions
+function IsNumber() {
+	if [[ "$1" =~ ^-?[0-9]+$ ]]
+	then
+		printf "0"
+	else
+		printf "${red}${bold}%s is not a number${normal}\n" "$1"
+	fi
+}
+
+function IsCard() {
+	IsNumberOutput=$(IsNumber $1)
+	if [[ "$IsNumberOutput" == "0" ]]
+	then
+		if (( $1 <= ${#cards[@]} )) && (( $1 > 0 ))
+		then
+			printf "0"
+		else
+			printf "${red}${bold}There is no such card with number %d${normal}\n" "$1"
+		fi
+	else
+		printf "%s\n" "$IsNumberOutput"
+	fi
+
+}
+
+function IsPort() {
+	IsNumberOutput=$(IsNumber $1)
+	if [[ "$IsNumberOutput" == "0" ]]
+	then
+		if (( $1 > 0 )) && (( $1 <= 99999 ))
+		then
+			printf "0"
+		else
+			printf "${red}${bold}%d is less than 0 or bigger than 99999${normal}\n" "$1"
+		fi
+	else
+		printf "%s\n" "$IsNumberOutput"
+	fi
+}
+
+function PrintCards() {
+	printf "Cards list: \n"
+
+	if [[ "$1" == "exit" ]]
+	then
+		printf "%-3s0. Exit\n" ""
+	fi
+
+	for i in "${!cards[@]}"
+	do
+		name=$(pactl list cards | grep -A18 "Card #" | grep -A17 "${cards[$i]}" | grep -oP "device.product.name = \K(.+)" | tr -d '"')
+		printf "%-3s%d. %-20s %s\n" "" "$((i + 1))" "${cards[$i]}" "$name" 
+	done
+}
+
+function ChooseCard() {
+	PrintCards "exit"
+	
+	printf "\n"
+
+	while true
+	do
+		read -p "Choose card number: " number
+		printf "\n"
+
+		if [[ "$number" == "0" ]] || [[ "${cards["$number"]}" == "$defaultCard" ]]
+		then
+			break
+		else
+			output="$(IsCard $number)"
+			if [[ "$output" == "0" ]]
+			then
+				opts["card"]="${cards["$((number - 1))"]}"
+				break
+			else
+				printf "%s\n" "$output"
+			fi
+		fi
+	done
+}
+
+function ChoosePort() {
+	while true
+	do
+		read -p "Enter desired port (0 < port <= 99999). Enter 0 to exit: " opts["port"]
+		printf "\n"
+
+		if [[ "${opts["port"]}" == "0" ]] || [[ "${opts["port"]}" == "$defaultPort" ]]
+		then
+			break
+		else
+			output=$(IsPort ${opts["port"]})
+			if [[ "$output" == "0" ]]
+			then
+				break
+			else
+				printf "%s\n" "$output"
+			fi
+		fi
+	done
+}
+
+function StereoMono() {
+	if [[ "$1" == "1" ]]
+	then
+		printf "Mono"
+	else 
+		if [[ "$1" == "2" ]]
+		then
+			printf "Stereo"
+		fi
+	fi
+
+}
+
+function SetOpt() {
+	declare -A optsOut=(
+		["port"]=$(IsPort $1)
+		["card"]=$(IsCard $1)
+	)
+
+	if [[ "$1" == "0" ]]
+	then
+		exit
+	else
+		if [[ -n "$1" ]]
+		then
+			out=${optsOut[$2]}
+			if [[ "$out" == "0" ]]
+			then
+				opts[$2]=$1
+			else
+				printf "%s\n" "$out"
+			fi
+		fi
+
+		if ! [[ -n "${opts[$2]}" ]]
+		then
+			case "$1" in
+				"port")
+					ChoosePort
+				;;
+				"card")
+					ChooseCard
+				;;
+			esac
+
+			if [[ "${opts[$2]}" == "0" ]]
+			then
+				exit
+			fi
+		fi
+	fi
+}
+
+# Script itself
+for (( cur=1; cur<=$#; cur++ ))
+do
+	next=$((cur+1))
+
+	case "${!cur}" in
+		-c|card)
+			SetOpt "${!next}" "card"
+
+			if [[ -n "${!next}" ]]
+			then
+				((cur++))
+			fi
+		;;
+		-p|port)
+			SetOpt "${!next}" "port"
+
+			if [[ -n "${!next}" ]]
+			then
+				((cur++))
+			fi
+		;;
+		-l|list)
+			toStart=0
+
+			PrintCards
+		;;
+		-cfg|config)
+			toStart=0
+
+			while true
+			do
+				printf "Config options (the current values in brackets):\n"
+				printf "%-3s%s\n" "" "0. Exit"
+				printf "%-3s%s\n" "" "1. Default card ($defaultCard)"
+				printf "%-3s%s\n" "" "2. Audio port ($defaultPort)"
+
+				printf "\n"
+
+				read -p "Choose config option: " confNumber
+				printf "\n"
+
+				if [[ "$confNumber" != "0" ]]
+				then
+					IsNumberOutput=$(IsNumber $confNumber)
+					if [[ "$IsNumberOutput" == "0" ]]
+					then
+						if (( $confNumber > 0 )) && (( $confNumber <= 4 ))
+						then
+							case "$confNumber" in
+								1)
+									printf "${magenta}${bold}You are changing default card number ($defaultCard)${normal}\n"
+									ChooseCard
+
+									if [[ "${opts["card"]}" == 0 ]] || [[ "${opts["card"]}" == "$defaultCard" ]]
+									then
+										printf "${yellow}${bold}Nothing changed.${normal}\n\n"
+									else
+										sed -i -E "s/defaultCard=.+/defaultCard=${opts["card"]}/" "$config"
+										printf "${green}${bold}Default card was successful changed to ${opts["card"]}${normal}\n\n"
+
+										defaultCard=${opts["card"]}
+									fi
+
+								;;
+								2)
+									printf "${magenta}${bold}You are changing audio port ($defaultPort)${normal}\n"
+
+									ChoosePort
+
+									if [[ "${opts["port"]}" == "0" ]] || [[ "${opts["port"]}" == "$defaultPort" ]]
+									then
+										printf "${yellow}${bold}Nothing changed.${normal}\n\n"
+									else
+										sed -i -E "s/defaultPort=[0-9]+/defaultPort=${opts["port"]}/" "$config"
+										printf "${green}${bold}Audio port was successful changed to ${opts["port"]}${normal}\n\n"
+
+										defaultPort=${opts["port"]}
+									fi
+								;;
+								*)
+									printf "You somehow gave wrong number\n"
+								;;
+							esac
+						else
+							printf "${red}${bold}There is no such config option with number %d${normal}\n" "$confNumber"
+						fi
+					else
+						printf "%s" "$IsNumberOutput"
+					fi
+				else
+					exit
+				fi
+			done
+		;;
+		-g|gen)
+			toStart=0
+
+			if touch "$config"
+			then
+				printf "defaultCard=%s\n" "${cards[0]}" > "$config"
+				printf "defaultPort=59010\n" >> "$config"
+			else
+				printf "Could not create config file: %s" "$?"
+				return $?
+			fi
+		;;
+		-h|help)
+			toStart=0
+
+			printf "%-11s %s\n" "Usage: spass" "[[-h|help] [-l|list] [-c|config] [-q | quit]...]"
+			printf "%-11s %s\n\n" "" "[<option> [<number>]...]"
+
+			printf "You can enter just 'spass' to start script with default options.\n\n"
+
+			printf "Commands:\n"
+
+			printf "These commands can be used together (e.g. spass -h -cfg -l -q -g)\n"
+
+			printf "%-3s%-4s | %-9s %-16s%s\n"  ""  "  -l" 	"list"    "List all available cards"
+			printf "%-3s%-4s | %-9s %-16s%s\n"  ""  "-cfg" 	"config"  "Show and configure default options"
+			printf "%-3s%-4s | %-9s %-16s%s\n"  ""  "  -h" 	"help"    "Print all commands"
+			printf "%-3s%-4s | %-9s %-16s%s\n"  ""  "  -q" 	"quit"    "Stop audio streaming"
+			printf "%-3s%-4s | %-9s %-16s%s\n"  ""  "  -g" 	"gen" 	  "Automatically generate config if it is missing or corrupted"
+			printf "\n"
+
+			printf "Options:\n"
+
+			printf "These options can be used together (e.g. spass -c 1 -p 58010)\n"
+			printf "They are used to set script startup options (they don't change default options)\n"
+
+			printf "%-3s%-4s | %-9s %-16s%-13s%s\n"  ""  "  -c"  "card"  "[<number>]"  "Set card"
+			printf "%-3s%-4s | %-9s %-16s%-13s%s\n"  ""  "  -p"  "port"  "[<number>]"  "Set port"
+			printf "\n"
+		;;
+		-q|quit)
+			toStart=0
+			runningModule=$(pactl list | grep tcp -B1 | grep M | sed 's/[^0-9]//g')
+
+			if [[ -n "$runningModule" ]]
+			then
+				printf "Stopping a running module #%d\n" "$runningModule"
+				pactl unload-module "$runningModule"
+			fi
+		;;
+		*)
+			printf "Help: %s -h|help\n" "$0"
+			exit
+		;;
+	esac
+done
+
+if (( toStart == 1 ))
+then
+	$0 quit
+
+	if [[ -n "${opts["card"]}" ]]; then defaultCard=${opts["card"]}; fi
+	if [[ -n "${opts["port"]}" ]]; then defaultPort=${opts["port"]}; fi
+
+	if ! [[ -n $(pactl list sinks | grep "$defaultCard") ]]
+	then
+		$0 gen
+		source "$config"
+	fi
+
+	sink=$(pactl list sinks short | grep "$defaultCard")
+
+	sinkn=$(awk '{print $1}' <<< "$sink")
+
+	monitor=$(awk '{print $2}' <<< "$sink")
+	monitor="${monitor}.monitor"
+
+	format=$(awk '{print $4}' <<< "$sink")
+	channels=$(awk '{print $5}' <<< "$sink" | sed 's/ch//')
+	rate=$(awk '{print $6}' <<< "$sink" | sed 's/Hz//')
+
+	ip=$(ip route get 1.2.3.4 | awk '{print $7}')
+
+	printf "Starting with:\n"
+	printf "%-3s%-20s%s\n" "" "Monitor Source" "$monitor"
+	printf "%-3s%-20s%s\n" "" "IP" "$ip"
+	printf "%-3s%-20s%s\n" "" "Port" "$defaultPort"
+	printf "%-3s%-20s%s\n" "" "Mono/Stereo" "$(StereoMono $channels)"
+	printf "%-3s%-20s%s\n" "" "Sample rate" "$rate"
+
+	pactl set-default-sink "$sinkn" > /dev/null 2>&1
+	moduleID=$(pactl load-module module-simple-protocol-tcp rate="$rate" format="$format" channels="$channels" source="$monitor" record=true port="$defaultPort" listen="$ip")
+
+	printf "%-3s%-20s%s\n" "" "Module ID" "$moduleID"
+fi
