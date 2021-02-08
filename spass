@@ -16,24 +16,6 @@ normal=$(tput sgr0)
 underline=$(tput smul)
 bold=$(tput bold)
 
-# Config
-
-config="$(dirname $0)/spass-config"
-
-if test -f "$config"
-then
-	source "$config"
-
-	if ! [[ -n "$defaultPort" ]] || ! [[ -n "$defaultCard" ]] 
-	then
-		$0 gen
-		source "$config"
-	fi
-else
-	$0 gen
-	source "$config"
-fi
-
 # Cards
 cards=()
 
@@ -49,6 +31,34 @@ declare -A opts=(
 )
 
 toStart=1
+
+# Config
+config="$(dirname $0)/spass-config"
+
+function GenerateConfig() {
+	if touch "$config"
+	then
+		printf "defaultCard=%s\n" "${cards[0]}" > "$config"
+		printf "defaultPort=59010\n" >> "$config"
+	else
+		printf "Could not create config file: %s" "$?"
+		return $?
+	fi
+}
+
+if test -f "$config"
+then
+	source "$config"
+
+	if ! [[ -n "$defaultPort" ]] || ! [[ -n "$defaultCard" ]] 
+	then
+		GenerateConfig
+		source "$config"
+	fi
+else
+	GenerateConfig
+	source "$config"
+fi
 
 # Functions
 function IsNumber() {
@@ -102,7 +112,7 @@ function PrintCards() {
 	for i in "${!cards[@]}"
 	do
 		name=$(pactl list cards | grep -A18 "Card #" | grep -A17 "${cards[$i]}" | grep -oP "device.product.name = \K(.+)" | tr -d '"')
-		printf "%-3s%d. %-20s %s\n" "" "$((i + 1))" "${cards[$i]}" "$name" 
+		printf "%-3s%d. %-30s %s\n" "" "$((i + 1))" "alsa_card.${cards[$i]}" "$name" 
 	done
 }
 
@@ -189,7 +199,7 @@ function SetOpt() {
 
 		if ! [[ -n "${opts[$2]}" ]]
 		then
-			case "$1" in
+			case "$2" in
 				"port")
 					ChoosePort
 				;;
@@ -212,7 +222,7 @@ do
 	next=$((cur+1))
 
 	case "${!cur}" in
-		-c|card)
+		-c|--card)
 			SetOpt "${!next}" "card"
 
 			if [[ -n "${!next}" ]]
@@ -220,7 +230,7 @@ do
 				((cur++))
 			fi
 		;;
-		-p|port)
+		-p|--port)
 			SetOpt "${!next}" "port"
 
 			if [[ -n "${!next}" ]]
@@ -228,12 +238,12 @@ do
 				((cur++))
 			fi
 		;;
-		-l|list)
+		-l|--list)
 			toStart=0
 
 			PrintCards
 		;;
-		-cfg|config)
+		-cfg|--config)
 			toStart=0
 
 			while true
@@ -301,22 +311,15 @@ do
 				fi
 			done
 		;;
-		-g|gen)
+		-g|--gen)
 			toStart=0
 
-			if touch "$config"
-			then
-				printf "defaultCard=%s\n" "${cards[0]}" > "$config"
-				printf "defaultPort=59010\n" >> "$config"
-			else
-				printf "Could not create config file: %s" "$?"
-				return $?
-			fi
+			GenerateConfig	
 		;;
-		-h|help)
+		-h|--help)
 			toStart=0
 
-			printf "%-11s %s\n" "Usage: spass" "[[-h|help] [-l|list] [-c|config] [-q | quit]...]"
+			printf "%-11s %s\n" "Usage: spass" "[[-h|--help] [-l|--list] [-c|--config] [-q|--quit]...]"
 			printf "%-11s %s\n\n" "" "[<option> [<number>]...]"
 
 			printf "You can enter just 'spass' to start script with default options.\n\n"
@@ -325,11 +328,11 @@ do
 
 			printf "These commands can be used together (e.g. spass -h -cfg -l -q -g)\n"
 
-			printf "%-3s%-4s | %-9s %-16s%s\n"  ""  "  -l" 	"list"    "List all available cards"
-			printf "%-3s%-4s | %-9s %-16s%s\n"  ""  "-cfg" 	"config"  "Show and configure default options"
-			printf "%-3s%-4s | %-9s %-16s%s\n"  ""  "  -h" 	"help"    "Print all commands"
-			printf "%-3s%-4s | %-9s %-16s%s\n"  ""  "  -q" 	"quit"    "Stop audio streaming"
-			printf "%-3s%-4s | %-9s %-16s%s\n"  ""  "  -g" 	"gen" 	  "Automatically generate config if it is missing or corrupted"
+			printf "%-3s%-4s | %-9s %-16s%s\n"  ""  "  -l" 	"--list"    "List all available cards"
+			printf "%-3s%-4s | %-9s %-16s%s\n"  ""  "-cfg" 	"--config"  "Show and configure default options"
+			printf "%-3s%-4s | %-9s %-16s%s\n"  ""  "  -h" 	"--help"    "Print all commands"
+			printf "%-3s%-4s | %-9s %-16s%s\n"  ""  "  -q" 	"--quit"    "Stop audio streaming"
+			printf "%-3s%-4s | %-9s %-16s%s\n"  ""  "  -g" 	"--gen" 	  "Automatically generate config if it is missing or corrupted"
 			printf "\n"
 
 			printf "Options:\n"
@@ -337,17 +340,17 @@ do
 			printf "These options can be used together (e.g. spass -c 1 -p 58010)\n"
 			printf "They are used to set script startup options (they don't change default options)\n"
 
-			printf "%-3s%-4s | %-9s %-16s%-13s%s\n"  ""  "  -c"  "card"  "[<number>]"  "Set card"
-			printf "%-3s%-4s | %-9s %-16s%-13s%s\n"  ""  "  -p"  "port"  "[<number>]"  "Set port"
+			printf "%-3s%-4s | %-9s %-16s%-13s%s\n"  ""  "  -c"  "--card"  "[<number>]"  "Set card"
+			printf "%-3s%-4s | %-9s %-16s%-13s%s\n"  ""  "  -p"  "--port"  "[<number>]"  "Set port"
 			printf "\n"
 		;;
-		-q|quit)
+		-q|--quit)
 			toStart=0
 			runningModule=$(pactl list | grep tcp -B1 | grep M | sed 's/[^0-9]//g')
 
 			if [[ -n "$runningModule" ]]
 			then
-				printf "Stopping a running module #%d\n" "$runningModule"
+				printf "Unloading a running module #%d\n" "$runningModule"
 				pactl unload-module "$runningModule"
 			fi
 		;;
@@ -360,31 +363,33 @@ done
 
 if (( toStart == 1 ))
 then
-	$0 quit
+	$0 --quit
 
 	if [[ -n "${opts["card"]}" ]]; then defaultCard=${opts["card"]}; fi
 	if [[ -n "${opts["port"]}" ]]; then defaultPort=${opts["port"]}; fi
 
 	if ! [[ -n $(pactl list sinks | grep "$defaultCard") ]]
 	then
-		$0 gen
+		GenerateConfig
 		source "$config"
 	fi
 
-	sink=$(pactl list sinks short | grep "$defaultCard")
+	sinkl=$(pactl list sinks short | grep "$defaultCard")
+	
+	sinkn=$(awk '{print $1}' <<< "$sinkl")
+	sink=$(awk '{print $2}' <<< "$sinkl")
+	monitor="${sink}.monitor"
 
-	sinkn=$(awk '{print $1}' <<< "$sink")
-
-	monitor=$(awk '{print $2}' <<< "$sink")
-	monitor="${monitor}.monitor"
-
-	format=$(awk '{print $4}' <<< "$sink")
-	channels=$(awk '{print $5}' <<< "$sink" | sed 's/ch//')
-	rate=$(awk '{print $6}' <<< "$sink" | sed 's/Hz//')
+	format=$(awk '{print $4}' <<< "$sinkl")
+	channels=$(awk '{print $5}' <<< "$sinkl" | sed 's/ch//')
+	rate=$(awk '{print $6}' <<< "$sinkl" | sed 's/Hz//')
 
 	ip=$(ip route get 1.2.3.4 | awk '{print $7}')
+	card="alsa_card.$defaultCard"
 
-	printf "Starting with:\n"
+	printf "Starting a module:\n"
+	printf "%-3s%-20s%s\n" "" "Card" "$card"
+	printf "%-3s%-20s%s\n" "" "Sink" "$sink"
 	printf "%-3s%-20s%s\n" "" "Monitor Source" "$monitor"
 	printf "%-3s%-20s%s\n" "" "IP" "$ip"
 	printf "%-3s%-20s%s\n" "" "Port" "$defaultPort"
@@ -392,7 +397,7 @@ then
 	printf "%-3s%-20s%s\n" "" "Sample rate" "$rate"
 
 	pactl set-default-sink "$sinkn" > /dev/null 2>&1
-	moduleID=$(pactl load-module module-simple-protocol-tcp rate="$rate" format="$format" channels="$channels" source="$monitor" record=true port="$defaultPort" listen="$ip")
+	moduleID=$(pactl load-module module-simple-protocol-tcp rate="$rate" format="$format" channels="$channels" source="$monitor" record="true" port="$defaultPort" listen="$ip")
 
 	printf "%-3s%-20s%s\n" "" "Module ID" "$moduleID"
 fi
