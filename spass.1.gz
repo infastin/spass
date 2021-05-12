@@ -1,0 +1,47 @@
+.TH SPASS "1" "May 2021" "Simple Pulse Audio Share Script version 0xE" "User Commands"
+.SH NAME
+spass \- Simple Pulse Audio Share Script
+.SH SYNOPSIS
+.B spass
+[\fI\,OPTION\/\fR]...
+.SH DESCRIPTION
+You can enter just 'spass' to start script with default options.
+.PP
+Options below can be used together (e.g. spass \fB\-h\fR \fB\-cfg\fR \fB\-l\fR \fB\-q\fR \fB\-g\fR).
+.TP
+\fB\-l\fR, \fB\-\-list\fR
+List all available cards
+.TP
+\fB\-cfg\fR, \fB\-\-config\fR
+Show and configure default options
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Show help
+.TP
+\fB\-q\fR, \fB\-\-quit\fR
+Stop audio streaming
+.TP
+\fB\-g\fR, \fB\-\-gen\fR
+Automatically generate config if it is missing or corrupted
+.TP
+\fB\-v\fR, \fB\-\-version\fR
+Show version
+.PP
+These options below also can be used together (e.g. spass \fB\-c\fR 1 \fB\-p\fR 58010). \
+They are used to set script startup options (they don't change default options).
+.TP
+\fB\-c\fR, \fB\-\-card\fR [NUMBER]
+Set card by it's number from \fB\-\-list\fR. If not specified, you can pick it interactively
+.TP
+\fB\-p\fR, \fB\-\-port\fR [NUMBER]
+Set port. If not specified, you can pick it interactively
+.SH "SEE ALSO"
+To play audio stream from PC on Android, I recommend using
+.B Simple Protocol Player, 
+which is available on
+.TP
+.B Google Play 
+<https://play.google.com/store/apps/details?id=com.kaytat.simpleprotocolplayer>
+.TP
+.B F-Droid
+<https://f-droid.org/packages/fr.jakse.raphael.simpleprotocolplayer>
