@@ -244,12 +244,24 @@ case "$1" in
 		do
 			case "$2" in
 				-c|--card)
-					SetOpt "$3" "card"
-					shift 2
+					if [[ "$3" == "--port" ]] || [[ "$3" == "--card" ]]
+					then
+						SetOpt "" "card"
+						shift 1
+					else
+						SetOpt "$3" "card"
+						shift 2
+					fi
 				;;
 				-p|--port)
-					SetOpt "$3" "port"
-					shift 2
+					if [[ "$3" == "--port" ]] || [[ "$3" == "--card" ]]
+					then
+						SetOpt "" "port"
+						shift 1
+					else
+						SetOpt "$3" "port"
+						shift 2
+					fi
 				;;
 				*)
 					break
