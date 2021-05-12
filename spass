@@ -343,7 +343,7 @@ case "$1" in
 	help)
 		toStart=0
 
-		printf "%-11s %s\n" "Usage: spass" "[COMMAND] [set [OPTION [NUMBER]]...]"
+		printf "%-11s %s\n" "Usage: spass" "[COMMAND] [set [-OPTION [NUMBER]]...]"
 
 		printf "You can enter just 'spass' to start script with default options.\n\n"
 
