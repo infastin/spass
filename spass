@@ -139,14 +139,19 @@ function ChooseCard() {
 		read -p "Choose card number: " number
 		printf "\n"
 
-		if [[ "$number" == "0" ]] || [[ "${cards["$number"]}" == "$defaultCard" ]]
+		if [[ "$number" == "0" ]]
 		then
+			toStart=0
 			break
 		else
 			output="$(IsCard $number)"
 			if [[ "$output" == "1" ]]
 			then
-				opts["card"]="${cards["$((number - 1))"]}"
+				if [[ "${cards["$((number - 1))"]}" != "$defaultCard" ]]
+				then
+					opts["card"]="${cards["$((number - 1))"]}"
+				fi
+
 				break
 			else
 				printf "%s\n" "$output"
@@ -158,16 +163,22 @@ function ChooseCard() {
 function ChoosePort() {
 	while true
 	do
-		read -p "Enter desired port (0 < port <= 99999). Enter 0 to exit: " opts["port"]
+		read -p "Enter desired port (0 < port <= 99999). Enter 0 to exit: " port
 		printf "\n"
 
-		if [[ "${opts["port"]}" == "0" ]] || [[ "${opts["port"]}" == "$defaultPort" ]]
+		if [[ "${port}" == "0" ]] 
 		then
+			toStart=0
 			break
 		else
-			output=$(IsPort ${opts["port"]})
+			output=$(IsPort ${port})
 			if [[ "$output" == "1" ]]
 			then
+				if [[ "${port}" == "$defaultPort" ]]
+				then
+					opts["port"]="${port}"
+				fi
+
 				break
 			else
 				printf "%s\n" "$output"
@@ -294,7 +305,7 @@ case "$1" in
 				IsNumberOutput=$(IsNumber $confNumber)
 				if [[ "$IsNumberOutput" == "1" ]]
 				then
-					if (( $confNumber > 0 )) && (( $confNumber <= 4 ))
+					if (( $confNumber > 0 )) && (( $confNumber <= 2 ))
 					then
 						case "$confNumber" in
 							1)
@@ -328,14 +339,14 @@ case "$1" in
 								fi
 							;;
 							*)
-								printf "You somehow gave wrong number\n"
+								printf "${red}${bold}There is no such config option with number %d${normal}\n" "$confNumber"
 							;;
 						esac
 					else
 						printf "${red}${bold}There is no such config option with number %d${normal}\n" "$confNumber"
 					fi
 				else
-					printf "%s" "$IsNumberOutput"
+					printf "%s\n" "$IsNumberOutput"
 				fi
 			else
 				exit
