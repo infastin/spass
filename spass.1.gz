@@ -28,7 +28,7 @@ Automatically generate config if it is missing or corrupted
 Show version
 .TP
 .B set
-Set startup options
+Set startup options. This doesn't change config
 .PP
 .SH OPTIONS
 .TP

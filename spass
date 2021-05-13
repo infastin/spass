@@ -365,7 +365,7 @@ case "$1" in
 		printf "%-3s%-16s %s\n"  ""  "quit"    	"Stop audio streaming"
 		printf "%-3s%-16s %s\n"  ""  "generate" "Automatically generate config if it is missing or corrupted"
 		printf "%-3s%-16s %s\n"  ""  "version" 	"Show version"
-		printf "%-3s%-16s %s\n"  ""  "set" 		"Set startup options"
+		printf "%-3s%-16s %s\n"  ""  "set" 		"Set startup options. This doesn't change config"
 		printf "\n"
 
 		printf "Startup options.\n"
