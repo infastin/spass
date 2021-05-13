@@ -312,7 +312,7 @@ case "$1" in
 								printf "${magenta}${bold}You are changing default card number ($defaultCard)${normal}\n"
 								ChooseCard
 
-								if [[ "${opts["card"]}" == 0 ]] || [[ "${opts["card"]}" == "$defaultCard" ]]
+								if [[ "${opts["card"]}" == "" ]] || [[ "${opts["card"]}" == "$defaultCard" ]]
 								then
 									printf "${yellow}${bold}Nothing changed.${normal}\n\n"
 								else
@@ -328,7 +328,7 @@ case "$1" in
 
 								ChoosePort
 
-								if [[ "${opts["port"]}" == "0" ]] || [[ "${opts["port"]}" == "$defaultPort" ]]
+								if [[ "${opts["port"]}" == "" ]] || [[ "${opts["port"]}" == "$defaultPort" ]]
 								then
 									printf "${yellow}${bold}Nothing changed.${normal}\n\n"
 								else
