@@ -1,5 +1,5 @@
 # Simple Pulse Audio Share Script
-It is a script for streaming audio from PC to Andoid using Pulse Audio.
+It is a script for streaming audio from PC to Android using Pulse Audio.
 ## Installation
 ```bash
 git clone git@github.com:infastin/spass.git
