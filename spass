@@ -48,6 +48,7 @@ config="$HOME/.config/spass.conf"
 function GenerateConfig() {
 	if touch "$config"
 	then
+		printf "#!/usr/bin/sh\n"
 		printf "defaultCard=%s\n" "${cards[0]}" > "$config"
 		printf "defaultPort=59010\n" >> "$config"
 	else
