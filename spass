@@ -48,8 +48,8 @@ config="$HOME/.config/spass.conf"
 function GenerateConfig() {
 	if touch "$config"
 	then
-		printf "#!/usr/bin/sh\n"
-		printf "defaultCard=%s\n" "${cards[0]}" > "$config"
+		printf "#!/usr/bin/sh\n" > "$config"
+		printf "defaultCard=%s\n" "${cards[0]}" >> "$config"
 		printf "defaultPort=59010\n" >> "$config"
 	else
 		printf "Could not create config file: %s" "$?"
@@ -57,11 +57,11 @@ function GenerateConfig() {
 	fi
 }
 
-if test -f "$config"
+if [[ -f "$config" ]]
 then
 	source "$config"
 
-	if ! [[ -n "$defaultPort" ]] || ! [[ -n "$defaultCard" ]] 
+	if [[ -z ${defaultPort+x} ]] || [[ -z ${defaultPort+x} ]] || ! [[ -n "$defaultPort" ]] || ! [[ -n "$defaultCard" ]] 
 	then
 		GenerateConfig
 		source "$config"
